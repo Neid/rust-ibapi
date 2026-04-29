@@ -282,7 +282,6 @@ pub(crate) fn decode_account_multi_value(message: &mut ResponseMessage) -> Resul
 
 // === Protobuf decoders ===
 
-#[allow(dead_code)]
 pub(crate) fn decode_position_proto(bytes: &[u8]) -> Result<Position, Error> {
     let p = proto::Position::decode(bytes)?;
     let contract = p.contract.as_ref().map(proto::decoders::decode_contract).unwrap_or_default();
@@ -354,7 +353,6 @@ pub(crate) fn decode_account_summary_proto(bytes: &[u8]) -> Result<AccountSummar
     })
 }
 
-#[allow(dead_code)]
 pub(crate) fn decode_position_multi_proto(bytes: &[u8]) -> Result<PositionMulti, Error> {
     let p = proto::PositionMulti::decode(bytes)?;
     let contract = p.contract.as_ref().map(proto::decoders::decode_contract).unwrap_or_default();

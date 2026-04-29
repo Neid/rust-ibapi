@@ -62,7 +62,13 @@ impl StreamDecoder<PositionUpdate> for PositionUpdate {
 
     fn decode(_context: &DecoderContext, message: &mut ResponseMessage) -> Result<Self, Error> {
         match message.message_type() {
-            IncomingMessages::Position => Ok(PositionUpdate::Position(decoders::decode_position(message)?)),
+            IncomingMessages::Position => {
+                let pos = message.decode_proto_or_text(
+                    decoders::decode_position_proto,
+                    decoders::decode_position,
+                )?;
+                Ok(PositionUpdate::Position(pos))
+            }
             IncomingMessages::PositionEnd => Ok(PositionUpdate::PositionEnd),
             message => Err(Error::Simple(format!("unexpected message: {message:?}"))),
         }
@@ -78,7 +84,13 @@ impl StreamDecoder<PositionUpdateMulti> for PositionUpdateMulti {
 
     fn decode(_context: &DecoderContext, message: &mut ResponseMessage) -> Result<Self, Error> {
         match message.message_type() {
-            IncomingMessages::PositionMulti => Ok(PositionUpdateMulti::Position(decoders::decode_position_multi(message)?)),
+            IncomingMessages::PositionMulti => {
+                let pos = message.decode_proto_or_text(
+                    decoders::decode_position_multi_proto,
+                    decoders::decode_position_multi,
+                )?;
+                Ok(PositionUpdateMulti::Position(pos))
+            }
             IncomingMessages::PositionMultiEnd => Ok(PositionUpdateMulti::PositionEnd),
             message => Err(Error::Simple(format!("unexpected message: {message:?}"))),
         }
