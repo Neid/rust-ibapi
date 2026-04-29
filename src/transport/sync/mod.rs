@@ -17,7 +17,7 @@ use log::{debug, error, info, warn};
 
 use crate::connection::sync::Connection;
 
-use super::routing::{determine_routing, is_warning_error, order_routing_strategy, OrderRoutingStrategy, RoutingDecision, UNSPECIFIED_REQUEST_ID};
+use super::routing::{decode_proto_error, determine_routing, is_warning_error, order_routing_strategy, OrderRoutingStrategy, RoutingDecision, UNSPECIFIED_REQUEST_ID};
 use super::{InternalSubscription, MessageBus, Response, Signal, SubscriptionBuilder};
 use crate::messages::{shared_channel_configuration, IncomingMessages, OutgoingMessages, ResponseMessage};
 use crate::{server_versions, Error};
@@ -598,6 +598,20 @@ impl<S: Stream> MessageBus for TcpMessageBus<S> {
 }
 
 fn error_event(server_version: i32, mut packet: ResponseMessage) -> Result<(), Error> {
+    if packet.is_protobuf {
+        if let Some(bytes) = packet.raw_bytes() {
+            let err = decode_proto_error(bytes);
+            log_error_fields(
+                err.id.unwrap_or(-1),
+                err.error_code.unwrap_or(0),
+                &err.error_msg.unwrap_or_default(),
+                &err.advanced_order_reject_json.unwrap_or_default(),
+                err.error_time.unwrap_or(0),
+            );
+        }
+        return Ok(());
+    }
+
     packet.skip(); // message_id
 
     if server_version >= server_versions::ERROR_TIME {

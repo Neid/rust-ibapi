@@ -26,12 +26,32 @@ struct RoutingEnvelope {
     pub id: Option<i32>,
 }
 
+/// Mirrors the protobuf `ErrorMessage` fields needed for routing and logging.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub(crate) struct ErrorEnvelope {
+    #[prost(int32, optional, tag = "1")]
+    pub id: Option<i32>,
+    #[prost(int64, optional, tag = "2")]
+    pub error_time: Option<i64>,
+    #[prost(int32, optional, tag = "3")]
+    pub error_code: Option<i32>,
+    #[prost(string, optional, tag = "4")]
+    pub error_msg: Option<String>,
+    #[prost(string, optional, tag = "5")]
+    pub advanced_order_reject_json: Option<String>,
+}
+
 /// Try to extract a request/order ID from protobuf raw bytes.
 /// Most protobuf messages encode `req_id` or `order_id` at tag 1 as an int32.
 /// Messages where tag 1 is not the routing ID (e.g. CommissionsReport) will need
 /// per-message-type handling when those messages migrate to protobuf.
 fn protobuf_first_int(raw_bytes: &[u8]) -> Option<i32> {
     prost::Message::decode(raw_bytes).ok().and_then(|e: RoutingEnvelope| e.id)
+}
+
+/// Decode a protobuf error message for routing classification.
+pub(crate) fn decode_proto_error(raw_bytes: &[u8]) -> ErrorEnvelope {
+    prost::Message::decode(raw_bytes).unwrap_or_default()
 }
 
 fn is_order_message(message_type: IncomingMessages) -> bool {
@@ -66,14 +86,14 @@ pub fn determine_routing(message: &ResponseMessage) -> RoutingDecision {
     // Special handling for error messages
     if message_type == IncomingMessages::Error {
         if message.is_protobuf {
-            // TODO: decode full protobuf Error message to extract error_code for
-            // downstream classification (e.g. is_warning_error). Currently hardcoded
-            // to 0 since no protobuf error messages are received yet.
-            let id = message.raw_bytes().and_then(protobuf_first_int).unwrap_or(-1);
-            return RoutingDecision::Error {
-                request_id: id,
-                error_code: 0,
-            };
+            if let Some(bytes) = message.raw_bytes() {
+                let err = decode_proto_error(bytes);
+                return RoutingDecision::Error {
+                    request_id: err.id.unwrap_or(-1),
+                    error_code: err.error_code.unwrap_or(0),
+                };
+            }
+            return RoutingDecision::Error { request_id: -1, error_code: 0 };
         }
         let request_id = message.error_request_id();
         let error_code = message.error_code();
