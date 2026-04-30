@@ -378,7 +378,7 @@ impl StreamDecoder<TickTypes> for TickTypes {
             )),
             IncomingMessages::TickSnapshotEnd => Ok(TickTypes::SnapshotEnd),
             IncomingMessages::Error => Ok(TickTypes::Notice(Notice::from(message))),
-            _ => Err(Error::NotImplemented),
+            _ => Err(Error::UnexpectedResponse(message.clone())),
         }
     }
 
