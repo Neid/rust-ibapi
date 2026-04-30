@@ -370,7 +370,12 @@ impl StreamDecoder<TickTypes> for TickTypes {
                 context.server_version,
                 message,
             )?)),
-            IncomingMessages::TickReqParams => Ok(TickTypes::RequestParameters(common::decoders::decode_tick_request_parameters(message)?)),
+            IncomingMessages::TickReqParams => Ok(TickTypes::RequestParameters(
+                message.decode_proto_or_text(
+                    common::decoders::decode_tick_request_parameters_proto,
+                    common::decoders::decode_tick_request_parameters,
+                )?
+            )),
             IncomingMessages::TickSnapshotEnd => Ok(TickTypes::SnapshotEnd),
             IncomingMessages::Error => Ok(TickTypes::Notice(Notice::from(message))),
             _ => Err(Error::NotImplemented),

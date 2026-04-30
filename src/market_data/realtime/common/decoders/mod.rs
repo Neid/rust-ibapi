@@ -245,6 +245,15 @@ pub(crate) fn decode_tick_request_parameters(message: &mut ResponseMessage) -> R
 
 // === Protobuf decoders ===
 
+pub(crate) fn decode_tick_request_parameters_proto(bytes: &[u8]) -> Result<TickRequestParameters, Error> {
+    let msg = crate::proto::TickReqParams::decode(bytes)?;
+    Ok(TickRequestParameters {
+        min_tick: msg.min_tick.as_deref().and_then(|s| s.parse().ok()).unwrap_or(0.0),
+        bbo_exchange: msg.bbo_exchange.unwrap_or_default(),
+        snapshot_permissions: msg.snapshot_permissions.unwrap_or(0),
+    })
+}
+
 #[allow(dead_code)]
 pub(crate) fn decode_tick_price_proto(bytes: &[u8]) -> Result<TickTypes, Error> {
     let msg = crate::proto::TickPrice::decode(bytes)?;
